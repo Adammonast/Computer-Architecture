@@ -2,6 +2,10 @@
 
 import sys
 
+LDI = 0b10000010  # load value into register
+PRN = 0b01000111  # print value
+HLT = 0b00000001  # halt execution
+
 
 class CPU:
     """Main CPU class."""
@@ -15,6 +19,13 @@ class CPU:
         self.reg = [0] * 8
         # program counter
         self.pc = 0
+        # branch table for instruction set
+        self.instruction_set = {}
+        # load the branch table
+        self.instruction_set[LDI] = self.LDI
+        self.instruction_set[PRN] = self.PRN
+        self.instruction_set[HLT] = self.HLT
+        self.running = False
 
     def ram_read(self, slot):
         # accept the address to read and return the value stored there
@@ -90,45 +101,44 @@ class CPU:
             print(" %02X" % self.reg[i], end='')
         print()
 
+    def LDI(self):
+        # get the register slot we want to write the value to
+        reg_num = self.ram_read(self.pc+1)
+        # get the value that we want to write to the register
+        value = self.ram_read(self.pc+2)
+        # set the register at the desired slot to the desired value
+        self.reg[reg_num] = value
+
+    def PRN(self):
+        # get the register slot we want to print the value of
+        reg_num = self.ram_read(self.pc+1)
+        # get that value by its slot
+        value = self.reg[reg_num]
+        # print!
+        print(value)
+
+    def HLT(self):
+        self.running = False
+
     def run(self):
         """Run the CPU."""
 
-        LDI = 0b10000010  # load value into register
-        PRN = 0b01000111  # print value
-        HLT = 0b00000001  # halt execution
+        # LDI = 0b10000010  # load value into register
+        # PRN = 0b01000111  # print value
+        # HLT = 0b00000001  # halt execution
 
-        running = True
-        while running:
+        self.running = True
+        while self.running:
             ir = self.ram_read(self.pc)
+            # if the instruction exists in the instruction set,
+            if ir in self.instruction_set:
+                # perform the instruction
+                self.instruction_set[ir]()
+                # increment the pc using bitwise and shifting
+                num_operands = (ir & 0b11000000) >> 6
+                pc_move_to = num_operands + 1
+                self.pc += pc_move_to
 
-            # HLT
-            if ir == HLT:
-                running = False
-
-            # LDI
-            elif ir == LDI:
-                # get the register slot we want to write the value to
-                reg_num = self.ram_read(self.pc + 1)
-                # get the value that we want to write to the register
-                value = self.ram_read(self.pc + 2)
-                # set the register at the desired slot to the desired value
-                self.reg[reg_num] = value
-                # increment by 3 since there were 3 instructions total
-                self.pc += 3
-
-            # PRN
-            elif ir == PRN:
-                # self.trace()
-                # get the register slot we want to print the value of
-                reg_num = self.ram_read(self.pc+1)
-                # get that value by its slot
-                value = self.reg[reg_num]
-                # print!
-                print(value)
-                # increment by 2 since there were 2 instructions total
-                self.pc += 2
-
-            # UNKNOWN INSTRUCTION
             else:
                 print(f'Unknown instruction {ir} at address {self.pc}')
                 sys.exit(1)
