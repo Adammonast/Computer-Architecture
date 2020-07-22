@@ -5,6 +5,7 @@ import sys
 LDI = 0b10000010  # load value into register
 PRN = 0b01000111  # print value
 HLT = 0b00000001  # halt execution
+MUL = 0b10100010  # multiply
 
 
 class CPU:
@@ -25,6 +26,7 @@ class CPU:
         self.instruction_set[LDI] = self.LDI
         self.instruction_set[PRN] = self.PRN
         self.instruction_set[HLT] = self.HLT
+        self.instruction_set[MUL] = self.MUL
         self.running = False
 
     def ram_read(self, slot):
@@ -80,7 +82,12 @@ class CPU:
         """ALU operations."""
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        # elif op == "SUB": etc
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
+        elif op == "MUL":
+            self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "DIV":
+            self.reg[reg_a] /= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -116,6 +123,14 @@ class CPU:
         value = self.reg[reg_num]
         # print!
         print(value)
+
+    def MUL(self):
+        # get the register slot of the first number
+        reg_num1 = self.ram_read(self.pc+1)
+        # get the register slot of the second number
+        reg_num2 = self.ram_read(self.pc+2)
+        # pass them off to the ALU
+        self.alu("MUL", reg_num1, reg_num2)
 
     def HLT(self):
         self.running = False
