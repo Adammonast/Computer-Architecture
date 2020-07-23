@@ -6,6 +6,8 @@ LDI = 0b10000010  # load value into register
 PRN = 0b01000111  # print value
 HLT = 0b00000001  # halt execution
 MUL = 0b10100010  # multiply
+PUSH = 0b01000101  # push to stack
+POP = 0b01000110  # pop off stack
 
 
 class CPU:
@@ -21,7 +23,7 @@ class CPU:
         # program counter
         self.pc = 0
         # set register 7 to point to stack top
-        # self.reg[7] = 0xf4
+        self.reg[7] = 0xf4
         # branch table for instruction set
         self.instruction_set = {}
         # load the branch table
@@ -29,25 +31,25 @@ class CPU:
         self.instruction_set[PRN] = self.PRN
         self.instruction_set[HLT] = self.HLT
         self.instruction_set[MUL] = self.MUL
-        # self.instruction_set[PUSH] = self.PUSH
-        # self.instruction_set[POP] = self.POP
+        self.instruction_set[PUSH] = self.PUSH
+        self.instruction_set[POP] = self.POP
         self.running = False
 
-    def ram_read(self, slot):
-        # accept the address to read and return the value stored there
-        return self.ram[slot]
-
-    def ram_write(self, slot, value):
-        # accept a value to write, and the address to write it to
-        self.ram[slot] = value
-
-    # def ram_read(self, mar):
+    # def ram_read(self, slot):
     #     # accept the address to read and return the value stored there
-    #     return self.ram[mar]
+    #     return self.ram[slot]
 
-    # def ram_write(self, mar, mdr):
+    # def ram_write(self, slot, value):
     #     # accept a value to write, and the address to write it to
-    #     self.ram[mar] = mdr
+    #     self.ram[slot] = value
+
+    def ram_read(self, mar):
+        # accept the address to read and return the value stored there
+        return self.ram[mar]
+
+    def ram_write(self, mar, mdr):
+        # accept a value to write, and the address to write it to
+        self.ram[mar] = mdr
 
     def load(self):
         """Load a program into memory."""
