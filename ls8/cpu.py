@@ -8,6 +8,8 @@ HLT = 0b00000001  # halt execution
 MUL = 0b10100010  # multiply
 PUSH = 0b01000101  # push to stack
 POP = 0b01000110  # pop off stack
+CALL = 0b01010000  # call a subroutine
+RET = 0b00010001  # return from a subroutine
 
 
 class CPU:
@@ -33,15 +35,9 @@ class CPU:
         self.instruction_set[MUL] = self.MUL
         self.instruction_set[PUSH] = self.PUSH
         self.instruction_set[POP] = self.POP
+        self.instruction_set[CALL] = self.CALL
+        self.instruction_set[RET] = self.RET
         self.running = False
-
-    # def ram_read(self, slot):
-    #     # accept the address to read and return the value stored there
-    #     return self.ram[slot]
-
-    # def ram_write(self, slot, value):
-    #     # accept a value to write, and the address to write it to
-    #     self.ram[slot] = value
 
     def ram_read(self, mar):
         # accept the address to read and return the value stored there
@@ -54,8 +50,6 @@ class CPU:
     def load(self):
         """Load a program into memory."""
 
-        # -- LOAD PROGRAM --
-
         # handle no argument for program
         if len(sys.argv) < 2:
             print('Please enter a program to run')
@@ -64,22 +58,6 @@ class CPU:
         filename = sys.argv[1]
 
         address = 0
-
-        # For now, we've just hardcoded a program:
-
-        # program = [
-        #     # From print8.ls8
-        #     0b10000010,  # LDI R0,8
-        #     0b00000000,
-        #     0b00001000,
-        #     0b01000111,  # PRN R0
-        #     0b00000000,
-        #     0b00000001,  # HLT
-        # ]
-
-        # for instruction in program:
-        #     self.ram[address] = instruction
-        #     address += 1
 
         with open(filename) as f:
             for line in f:
@@ -127,7 +105,7 @@ class CPU:
         print()
 
     def LDI(self):
-        # get the register slot we want to write the value to
+        # get the register slot we're writing the value to
         reg_num = self.ram_read(self.pc+1)
         # get the value that we want to write to the register
         value = self.ram_read(self.pc+2)
@@ -150,41 +128,24 @@ class CPU:
         # pass them off to the ALU
         self.alu("MUL", reg_num1, reg_num2)
 
-    # todos for push
-    # decrement SP
-    # ***stacks going towards the bottom
-    # get the value that's going to be stored
-    # get the value
-    # figure out where to store it
-    # finally, actually store it
-
-    # todos for pop
-    # get the address that the SP is pointing to
-    # get the value of that address from RAM
-    # get the number for the given register
-    # write the value to this register
-    # increment the SP
-    # ***remember that it stacks going towards the bottom
-
     def PUSH(self):
+        # stack pointer
         SP = 7
-        # decrement SP--remember that it stacks going towards the bottom
+        # decrement stack pointer, stacks going towards the bottom
         self.reg[SP] -= 1
-
-        # get the value we want to store
+        # get the value we're storing
         reg_num = self.ram_read(self.pc+1)
         # get the value
         value = self.reg[reg_num]
-
         # figure out where to store it
         top_of_stack_addr = self.reg[SP]
-
-        # store it
+        # actually store it
         self.ram_write(top_of_stack_addr, value)
 
     def POP(self):
+        # stack pointer
         SP = 7
-        # get the address that the SP is pointing to
+        # get the address that the stack pointer is pointing to
         address = self.reg[SP]
         # get the value of that address from RAM
         value = self.ram_read(address)
@@ -192,18 +153,47 @@ class CPU:
         reg_num = self.ram_read(self.pc+1)
         # write the value to this register
         self.reg[reg_num] = value
-        # increment the SP--remember that it stacks going towards the bottom
+        # increment the stack pointer, stacks going towards the bottom
         self.reg[SP] += 1
+
+    def CALL(self):
+        # get return address
+        # this command has one parameter -> increments by 2
+        return_addr = self.pc+2
+        # push the return address to stack
+        SP = 7
+        # decrement stack pointer, stacks going towards the bottom
+        self.reg[SP] -= 1
+        # write to the stack with the return address
+        self.ram_write(self.reg[SP], return_addr)
+        # get the address that we want to call
+        # move program counter to
+        reg_num = self.ram_read(self.pc+1)
+        subroutine_addr = self.reg[reg_num]
+        # call subroutine
+        self.pc = subroutine_addr
+        # This has to return true because we are moving
+        return True
+
+    def RET(self):
+        # stack pointer
+        SP = 7
+        # get the address that the stack pointer is pointing to
+        address = self.reg[SP]
+        # get the value of that address from RAM
+        return_addr = self.ram_read(address)
+        # set the program counter to the return address
+        self.pc = return_addr
+        # increment the stack pointer, remember that it stacks going towards the bottom
+        self.reg[SP] += 1
+
+        return True
 
     def HLT(self):
         self.running = False
 
     def run(self):
         """Run the CPU."""
-
-        # LDI = 0b10000010  # load value into register
-        # PRN = 0b01000111  # print value
-        # HLT = 0b00000001  # halt execution
 
         self.running = True
         while self.running:
@@ -212,13 +202,11 @@ class CPU:
             if ir in self.instruction_set:
                 # perform the instruction
                 self.instruction_set[ir]()
-                # increment the pc using bitwise and shifting
+                # increment the program counter using bitwise and shifting
                 instruction_length = (ir & 0b11000000) >> 6
-
-                # pc should be incremented by this much
+                # program counter should be incremented by this much
                 pc_move_to = instruction_length + 1
-
-                # increment pc
+                # increment program counter
                 self.pc += pc_move_to
 
             else:
