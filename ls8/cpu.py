@@ -10,6 +10,7 @@ PUSH = 0b01000101  # push to stack
 POP = 0b01000110  # pop off stack
 CALL = 0b01010000  # call subroutine
 RET = 0b00010001  # return from subroutine
+CMP = 0b10100111  # compare two different registers
 
 
 class CPU:
@@ -24,6 +25,8 @@ class CPU:
         self.reg = [0] * 8
         # program counter
         self.pc = 0
+        # set the flag: 00000LGE less,greater,equal
+        self.fl = 0b00000000
         # set register 7 to point to stack top
         self.reg[7] = 0xf4
         # branch table for instruction set
@@ -37,6 +40,7 @@ class CPU:
         self.instruction_set[POP] = self.POP
         self.instruction_set[CALL] = self.CALL
         self.instruction_set[RET] = self.RET
+        self.instruction_set[CMP] = self.CMP
         self.running = False
 
     def ram_read(self, mar):
@@ -84,6 +88,18 @@ class CPU:
             self.reg[reg_a] *= self.reg[reg_b]
         elif op == "DIV":
             self.reg[reg_a] /= self.reg[reg_b]
+        elif op == "CMP":
+            # 00000LGE less,greater,equal
+            # get the values
+            val_a = self.reg[reg_a]
+            val_b = self.reg[reg_b]
+            # set what the flags should be
+            if val_a == val_b:
+                self.fl = 0b00000001
+            elif val_a > val_b:
+                self.fl = 0b00000010
+            else:  # val_a is less
+                self.fl = 0b00000100
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -186,8 +202,15 @@ class CPU:
         self.pc = return_addr
         # increment the stack pointer, stacks going towards the bottom
         self.reg[SP] += 1
-
         return True
+
+    def CMP(self):
+        # target first register address
+        reg_a = self.ram_read(self.pc+1)
+        # target second register address
+        reg_b = self.ram_read(self.pc+2)
+        # pass to the ALU
+        self.alu("CMP", reg_a, reg_b)
 
     def HLT(self):
         self.running = False
