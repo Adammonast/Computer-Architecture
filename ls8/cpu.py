@@ -11,6 +11,7 @@ POP = 0b01000110  # pop off stack
 CALL = 0b01010000  # call subroutine
 RET = 0b00010001  # return from subroutine
 CMP = 0b10100111  # compare two different registers
+JMP = 0b01010100  # jump to address
 
 
 class CPU:
@@ -41,6 +42,7 @@ class CPU:
         self.instruction_set[CALL] = self.CALL
         self.instruction_set[RET] = self.RET
         self.instruction_set[CMP] = self.CMP
+        self.instruction_set[JMP] = self.JMP
         self.running = False
 
     def ram_read(self, mar):
@@ -212,6 +214,16 @@ class CPU:
         # pass to the ALU
         self.alu("CMP", reg_a, reg_b)
 
+    def JMP(self):
+        # select the register value we're jumping to
+        reg_num = self.ram_read(self.pc+1)
+        address_to_jump_to = self.reg[reg_num]
+        # jump program controller to this address
+        self.pc = address_to_jump_to
+        # return true to indicate that we are jumping
+        # handy for conditional jumps
+        return True
+
     def HLT(self):
         self.running = False
 
@@ -225,12 +237,16 @@ class CPU:
             if ir in self.instruction_set:
                 # perform the instruction
                 self.instruction_set[ir]()
+                # check if the instruction increments the program controller itself or no
+                sets_pc = (ir & 0b00010000) >> 4
                 # increment the program counter using bitwise and shifting
                 instruction_length = (ir & 0b11000000) >> 6
-                # program counter should be incremented by this much
-                pc_move_to = instruction_length + 1
-                # increment program counter
-                self.pc += pc_move_to
+                # manually increment the program controller if the instruction doesn't
+                if not sets_pc:
+                    # program counter should be incremented by this much
+                    pc_move_to = instruction_length + 1
+                    # increment program counter
+                    self.pc += pc_move_to
 
             else:
                 print(f'Unknown instruction {ir} at address {self.pc}')
