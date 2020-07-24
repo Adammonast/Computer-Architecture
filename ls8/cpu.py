@@ -8,8 +8,8 @@ HLT = 0b00000001  # halt execution
 MUL = 0b10100010  # multiply
 PUSH = 0b01000101  # push to stack
 POP = 0b01000110  # pop off stack
-CALL = 0b01010000  # call a subroutine
-RET = 0b00010001  # return from a subroutine
+CALL = 0b01010000  # call subroutine
+RET = 0b00010001  # return from subroutine
 
 
 class CPU:
@@ -184,7 +184,7 @@ class CPU:
         return_addr = self.ram_read(address)
         # set the program counter to the return address
         self.pc = return_addr
-        # increment the stack pointer, remember that it stacks going towards the bottom
+        # increment the stack pointer, stacks going towards the bottom
         self.reg[SP] += 1
 
         return True
