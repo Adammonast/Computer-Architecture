@@ -12,6 +12,8 @@ CALL = 0b01010000  # call subroutine
 RET = 0b00010001  # return from subroutine
 CMP = 0b10100111  # compare two different registers
 JMP = 0b01010100  # jump to address
+JEQ = 0b01010101  # jump to address if equal
+JNE = 0b01010110  # jump to address if not equal
 
 
 class CPU:
@@ -43,6 +45,8 @@ class CPU:
         self.instruction_set[RET] = self.RET
         self.instruction_set[CMP] = self.CMP
         self.instruction_set[JMP] = self.JMP
+        self.instruction_set[JEQ] = self.JEQ
+        self.instruction_set[JNE] = self.JNE
         self.running = False
 
     def ram_read(self, mar):
@@ -91,7 +95,7 @@ class CPU:
         elif op == "DIV":
             self.reg[reg_a] /= self.reg[reg_b]
         elif op == "CMP":
-            # 00000LGE less,greater,equal
+            # 00000LGE less, greater, equal
             # get the values
             val_a = self.reg[reg_a]
             val_b = self.reg[reg_b]
@@ -224,6 +228,18 @@ class CPU:
         # handy for conditional jumps
         return True
 
+    def JEQ(self):
+        if self.fl == 0b00000001:
+            # the equal flag is set to 1 (true)
+            self.JMP()
+            return True
+
+    def JNE(self):
+        if self.fl != 0b00000001:
+            # the equal flag is set to 0 (false)
+            self.JMP()
+            return True
+
     def HLT(self):
         self.running = False
 
@@ -236,13 +252,16 @@ class CPU:
             # if the instruction exists in the instruction set,
             if ir in self.instruction_set:
                 # perform the instruction
-                self.instruction_set[ir]()
+                # if jumping is true, this is a comparison of JEQ, JGE, JGT, etc
+                # it will be jumping
+                jumping = self.instruction_set[ir]()
                 # check if the instruction increments the program controller itself or no
                 sets_pc = (ir & 0b00010000) >> 4
                 # increment the program counter using bitwise and shifting
                 instruction_length = (ir & 0b11000000) >> 6
                 # manually increment the program controller if the instruction doesn't
-                if not sets_pc:
+                # instruction that increments conditionally jumping will determine if program counter jumps
+                if (sets_pc == 0) or (sets_pc == 1 and not jumping):
                     # program counter should be incremented by this much
                     pc_move_to = instruction_length + 1
                     # increment program counter
